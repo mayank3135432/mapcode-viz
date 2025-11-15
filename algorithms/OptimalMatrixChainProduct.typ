@@ -4,8 +4,8 @@
 == Optimal Matrix Chain Multiplication
 #set math.equation(numbering: none)
 
-Given a sequence of matrices $A_(n_1 times n_2),A_(n_2 times n_3),..,A_(n_(q-1) times q_i)$, Compute the minimum number of scalar multiplication required to multiply all of them.  
-The algorithm takes in vector $d = (n_1,..,n_q)$ and returns an integer.
+Given a sequence of matrices $A_(n_0 times n_1),A_(n_1 times n_2),..,A_(n_(q-1) times q_i)$, Compute the minimum number of scalar multiplication required to multiply all of them.  
+The algorithm takes in vector $d = (n_0,..,n_q)$ and returns an integer.
 
 Formal definition: $"num_mul"(d) := T_d (0,|d|-2)$ where
 
@@ -20,13 +20,15 @@ Examples:
 
 *As mapcode:*
 
-_primitives_: `mod`($mod$) is strict. i.e operation on $bot$ is undefined.
+_primitives_: $"min",+,<,<=$. \
+Non Comparitive Operations on $bot$ return $bot$. (For example: $4+bot=bot$ , $min({3,2,bot,10})=bot$)
 
 $
-  I = "vec"[NN] quad quad quad X & = NN times NN -> NN_bot quad quad quad
+  k in NN \
+  I = NN^k quad quad quad X & = NN times NN -> NN_bot quad quad quad
   A = NN \
     rho(d) & = {(i,j) -> bot | i,j in NN} \
-        F_d (x) & = cases(
+        F_d (x)(i,j) & = cases(
                   0 & "if " i = j,
                   min { x(i,k)+ x(k+1,j)+d(i) dot d(j+1) dot d(k+1) |i<=k<j} & "else"
                 ) \
@@ -36,7 +38,7 @@ $
 
 
 
-#let inst_dimvecs  = (10, 20, 30, 40, 50);
+#let inst_dimvecs  = (13, 5, 89, 3, 34);
 #let inst_dm = inst_dimvecs.len();
 
 
@@ -55,26 +57,37 @@ $#{
     x
   }
 
+  let safe_operation(a, b, c, op) = {
+    if a == none or b == none or c == none {
+      none
+    } else {
+      op(a, b, c)
+    }
+  }
+
   let F_i(d) = (x) => ((i, j)) => {
     if i == j {
       0
     } else {
-      let mut = none
       let min_val = none
+      let mut = none
       for k in range(i, j) {
-        let term1 = x.at(i).at(k)
-        let term2 = x.at(k+1).at(j)
-        let product = d.at(i) * d.at(j+1) * d.at(k+1)
+        let current = safe_operation(
+          x.at(i).at(k),
+          x.at(k+1).at(j), 
+          d.at(i) * d.at(j+1) * d.at(k+1),
+          (a, b, c) => a + b + c
+        )
         
-        // If any component is none, the result is none
-        if term1 == none or term2 == none {
-          // Continue to check other k values, but min_val becomes none
-          min_val = none
-        } else if min_val != none {
-          let current = term1 + term2 + product
-          if current < min_val {
+        if current != none {
+          if min_val == none or current < min_val {
             min_val = current
           }
+        } else {
+          // If we want to propagate none immediately:
+          // return none
+          // If we want to check all k but return none if any is none:
+          min_val = none
         }
       }
       min_val
@@ -92,7 +105,7 @@ $#{
   // (2, 3, 4, 5), (3, 4, 5, 6), 5)
   let I_h(inst_dimvecs) = {
     [
-      $d: vec(..#inst_dimvecs.map(i => [#i]), delim: "[")_(#inst_dimvecs.len())$
+      $d: vec(..#inst_dimvecs.map(i => [#i]), delim: "[")$
     ]
   }
 
@@ -109,7 +122,7 @@ $#{
     for w in range(0, x.at(0).len()) {
       header_cells.push(rect(fill: orange.transparentize(70%), inset: 14pt)[$#w$])
     }
-    rows.push(grid(columns: header_cells.len() * (14pt,), rows: 14pt, align: center + horizon, ..header_cells))
+    rows.push(grid(columns: header_cells.len() * (30pt,), rows: 14pt, align: center + horizon, ..header_cells))
 
     for i in range(0, x.len()) {
       let row = ()
